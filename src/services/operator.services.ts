@@ -251,5 +251,12 @@ async getContractBalance(): Promise<string> {
       throw new Error(`Failed to get allowance: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+
+  async getReputation(operatorAddress: string): Promise<string> {
+    const formattedAddress = this.validateAndFormatAddress(operatorAddress);
+    
+    const reputationBalance = await this.contract.getReputation(formattedAddress);
+    return reputationBalance.toString();
+  }
 }
 

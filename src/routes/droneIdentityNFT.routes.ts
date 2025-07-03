@@ -12,27 +12,8 @@ function getDronesService(): DronesService {
   }
 }
 
-// Get all drones
-router.get('/', async (req, res) => {
-  try {
-    const dronesService = getDronesService();
-    const drones = await dronesService.getAllDrones();
-    res.json({
-      success: true,
-      data: drones,
-      count: drones.length
-    });
-  } catch (error) {
-    console.error('Error getting drones:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
 // Mint new drone
-router.post('/', async (req, res) => {
+router.post('/mint', async (req, res) => {
   try {
     const dronesService = getDronesService();
     const result = await dronesService.mintDrone(req.body);
@@ -50,8 +31,8 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get drone by ID
-router.get('/:tokenId', async (req, res) => {
+// Get drone data by token ID
+router.get('/drone/:tokenId', async (req, res) => {
   try {
     const dronesService = getDronesService();
     const tokenId = parseInt(req.params.tokenId);
@@ -76,47 +57,8 @@ router.get('/:tokenId', async (req, res) => {
   }
 });
 
-// Get drones by owner
-router.get('/owner/:address', async (req, res) => {
-  try {
-    const dronesService = getDronesService();
-    const owner = req.params.address;
-    const drones = await dronesService.getDronesByOwner(owner);
-    res.json({
-      success: true,
-      data: drones,
-      count: drones.length,
-      owner
-    });
-  } catch (error) {
-    console.error('Error getting drones by owner:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get total supply
-router.get('/stats/total', async (req, res) => {
-  try {
-    const dronesService = getDronesService();
-    const total = await dronesService.getTotalSupply();
-    res.json({
-      success: true,
-      data: { total }
-    });
-  } catch (error) {
-    console.error('Error getting total supply:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
 // Update cert hashes
-router.put('/:tokenId/cert-hashes', async (req, res) => {
+router.put('/cert-hashes/:tokenId', async (req, res) => {
   try {
     const dronesService = getDronesService();
     const tokenId = parseInt(req.params.tokenId);
@@ -147,7 +89,7 @@ router.put('/:tokenId/cert-hashes', async (req, res) => {
 });
 
 // Update permitted zones
-router.put('/:tokenId/permitted-zones', async (req, res) => {
+router.put('/permitted-zones/:tokenId', async (req, res) => {
   try {
     const dronesService = getDronesService();
     const tokenId = parseInt(req.params.tokenId);
@@ -177,8 +119,70 @@ router.put('/:tokenId/permitted-zones', async (req, res) => {
   }
 });
 
+// Update owner history
+router.put('/owner-history/:tokenId', async (req, res) => {
+  try {
+    const dronesService = getDronesService();
+    const tokenId = parseInt(req.params.tokenId);
+    if (isNaN(tokenId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token ID'
+      });
+    }
+
+    const txHash = await dronesService.updateOwnerHistory({
+      tokenId,
+      ownerHistory: req.body.ownerHistory
+    });
+
+    res.json({
+      success: true,
+      data: { txHash },
+      message: 'Owner history updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating owner history:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Update maintenance hash
+router.put('/maintenance-hash/:tokenId', async (req, res) => {
+  try {
+    const dronesService = getDronesService();
+    const tokenId = parseInt(req.params.tokenId);
+    if (isNaN(tokenId)) {
+      return res.status(400).json({
+        success: false,
+        error: 'Invalid token ID'
+      });
+    }
+
+    const txHash = await dronesService.updateMaintenanceHash({
+      tokenId,
+      maintenanceHash: req.body.maintenanceHash
+    });
+
+    res.json({
+      success: true,
+      data: { txHash },
+      message: 'Maintenance hash updated successfully'
+    });
+  } catch (error) {
+    console.error('Error updating maintenance hash:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Update status
-router.put('/:tokenId/status', async (req, res) => {
+router.put('/status/:tokenId', async (req, res) => {
   try {
     const dronesService = getDronesService();
     const tokenId = parseInt(req.params.tokenId);
@@ -208,8 +212,8 @@ router.put('/:tokenId/status', async (req, res) => {
   }
 });
 
-// Delete/burn drone
-router.delete('/:tokenId', async (req, res) => {
+// Burn drone
+router.delete('/burn/:tokenId', async (req, res) => {
   try {
     const dronesService = getDronesService();
     const tokenId = parseInt(req.params.tokenId);
@@ -228,6 +232,25 @@ router.delete('/:tokenId', async (req, res) => {
     });
   } catch (error) {
     console.error('Error burning drone:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get all drones
+router.get('/all', async (req, res) => {
+  try {
+    const dronesService = getDronesService();
+    const drones = await dronesService.getAllDrones();
+    res.json({
+      success: true,
+      data: drones,
+      count: drones.length
+    });
+  } catch (error) {
+    console.error('Error getting drones:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

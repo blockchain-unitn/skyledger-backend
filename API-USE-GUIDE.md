@@ -41,33 +41,115 @@ npm run test:drones
 
 #### - DroneIdentityNFT API
 ```http
-Get All Drones: GET /api/drones
-Mint New Drone: POST /api/drones
-Get Drone by Token ID: GET /api/drones/{tokenId}
-Get Drones by Owner: GET /api/drones/owner/{address}
-Get Total Supply: GET /api/drones/stats/total
-Update Cert Hashes: PUT /api/drones/{tokenId}/cert-hashes
-Update Permitted Zones: PUT /api/drones/{tokenId}/permitted-zones
-Update Owner History: PUT /api/drones/{tokenId}/owner-history
-Update Maintenance Hash: PUT /api/drones/{tokenId}/maintenance-hash
-Update Drone Status: PUT /api/drones/{tokenId}/status
-Burn/Delete Drone: DELETE /api/drones/{tokenId}
-Check Contract Ownership: GET /api/drones/debug/ownership
-Validate Contract: GET /api/drones/debug/contract
+Mint Drone: POST /api/drones/mint
+Get Drone Data: GET /api/drones/drone/{tokenId}
+Update Cert Hashes: PUT /api/drones/cert-hashes/{tokenId}
+Update Permitted Zones: PUT /api/drones/permitted-zones/{tokenId}
+Update Owner History: PUT /api/drones/owner-history/{tokenId}
+Update Maintenance Hash: PUT /api/drones/maintenance-hash/{tokenId}
+Update Status: PUT /api/drones/status/{tokenId}
+Burn Drone: DELETE /api/drones/burn/{tokenId}
+Get All Drones: GET /api/drones/all
 ```
+
+#### - Example Usage
+
+**Mint a new drone:**
+```bash
+curl -X POST http://localhost:3000/api/drones/mint \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "0x1234567890123456789012345678901234567890",
+    "serialNumber": "DRONE001",
+    "model": "DJI-PHANTOM",
+    "droneType": 0,
+    "certHashes": ["hash1", "hash2"],
+    "permittedZones": [0, 1],
+    "ownerHistory": ["Owner1"],
+    "maintenanceHash": "maintenanceHash1",
+    "status": 0
+  }'
+```
+
+**Get drone data:**
+```bash
+curl -X GET http://localhost:3000/api/drones/drone/1
+```
+
+**Update drone status:**
+```bash
+curl -X PUT http://localhost:3000/api/drones/status/1 \
+  -H "Content-Type: application/json" \
+  -d '{"status": 1}'
+```
+
+**Burn a drone:**
+```bash
+curl -X DELETE http://localhost:3000/api/drones/burn/1
+```
+
+**Get all drones:**
+```bash
+curl -X GET http://localhost:3000/api/drones/all
+```
+
+**Enum Values:**
+- DroneType: MEDICAL=0, CARGO=1, SURVEILLANCE=2, AGRICULTURAL=3, RECREATIONAL=4, MAPPING=5, MILITAR=6
+- ZoneType: RURAL=0, URBAN=1, HOSPITALS=2, MILITARY=3, RESTRICTED=4
+- DroneStatus: ACTIVE=0, MAINTENANCE=1, INACTIVE=2
 
 #### - Operators API
 ```http
-Get Operator Info: GET /api/operators/{address}
+Add Admin: POST /api/operators/add-admin
+Remove Admin: POST /api/operators/remove-admin
 Register Operator: POST /api/operators/register
 Spend Tokens: POST /api/operators/spend-tokens
 Penalize Operator: POST /api/operators/penalize
-Add Admin: POST /api/operators/admin/add
-Remove Admin: DELETE /api/operators/admin/remove
-Get Operator Stats: GET /api/operators/stats/overview
-Get Contract Balance: GET /api/operators/stats/balance
-Check Roles: GET /api/operators/debug/roles
-Validate Contract: GET /api/operators/debug/contract
+Get Reputation: GET /api/operators/reputation/{operator}
+Get Operator Info: GET /api/operators/info/{address}
+```
+
+#### - Example Usage
+
+**Add admin:**
+```bash
+curl -X POST http://localhost:3000/api/operators/add-admin \
+  -H "Content-Type: application/json" \
+  -d '{"newAdmin": "0x1234567890123456789012345678901234567890"}'
+```
+
+**Register operator:**
+```bash
+curl -X POST http://localhost:3000/api/operators/register \
+  -H "Content-Type: application/json" \
+  -d '{"operator": "0x1234567890123456789012345678901234567890"}'
+```
+
+**Spend tokens:**
+```bash
+curl -X POST http://localhost:3000/api/operators/spend-tokens \
+  -H "Content-Type: application/json" \
+  -d '{"amount": "1.0"}'
+```
+
+**Penalize operator:**
+```bash
+curl -X POST http://localhost:3000/api/operators/penalize \
+  -H "Content-Type: application/json" \
+  -d '{
+    "operator": "0x1234567890123456789012345678901234567890",
+    "penalty": "100"
+  }'
+```
+
+**Get reputation:**
+```bash
+curl -X GET http://localhost:3000/api/operators/reputation/0x1234567890123456789012345678901234567890
+```
+
+**Get operator info:**
+```bash
+curl -X GET http://localhost:3000/api/operators/info/0x1234567890123456789012345678901234567890
 ```
 
 ### RouteLogging contract
@@ -103,6 +185,55 @@ npm run test:route-permissions
 ```http
 Check Route Authorization: POST /api/route-permissions/check
 Request Route Authorization: POST /api/route-permissions/request
+```
+
+#### - Example Usage
+
+**Check route authorization (view function - no gas cost):**
+```bash
+curl -X POST http://localhost:3000/api/route-permissions/check \
+  -H "Content-Type: application/json" \
+  -d '{
+    "droneId": 1,
+    "zones": [1, 0],
+    "altitudeLimit": 500
+  }'
+```
+
+**Request route authorization (transaction - costs gas, emits event):**
+```bash
+curl -X POST http://localhost:3000/api/route-permissions/request \
+  -H "Content-Type: application/json" \
+  -d '{
+    "droneId": 1,
+    "zones": [1, 0],
+    "altitudeLimit": 500
+  }'
+```
+
+**Zone Type Values:**
+- `RURAL = 0`
+- `URBAN = 1`
+- `HOSPITALS = 2`
+- `MILITARY = 3`
+- `RESTRICTED = 4`
+
+**Example with different zone combinations:**
+```bash
+# Valid zones (Urban + Rural)
+curl -X POST http://localhost:3000/api/route-permissions/check \
+  -H "Content-Type: application/json" \
+  -d '{"droneId": 1, "zones": [1, 0], "altitudeLimit": 500}'
+
+# Restricted zones (Military + Restricted)
+curl -X POST http://localhost:3000/api/route-permissions/check \
+  -H "Content-Type: application/json" \
+  -d '{"droneId": 1, "zones": [3, 4], "altitudeLimit": 1000}'
+
+# Mixed zones (Urban + Hospitals)
+curl -X POST http://localhost:3000/api/route-permissions/check \
+  -H "Content-Type: application/json" \
+  -d '{"droneId": 1, "zones": [1, 2], "altitudeLimit": 750}'
 ```
 
 ### ViolationsAlerting contract
