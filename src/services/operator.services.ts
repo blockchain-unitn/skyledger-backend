@@ -205,4 +205,51 @@ async getContractBalance(): Promise<string> {
       throw new Error(`Contract validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }
   }
+  async approveReputationTokens(amount?: string): Promise<string> {
+    try {
+      // Get reputation token address
+      const reputationTokenAddress = await this.contract.reputationToken();
+      
+      // ERC20 ABI for approve function
+      const erc20Abi = [
+        "function approve(address spender, uint256 amount) external returns (bool)",
+        "function decimals() view returns (uint8)",
+        "function allowance(address owner, address spender) view returns (uint256)"
+      ];
+      
+      const tokenContract = new ethers.Contract(reputationTokenAddress, erc20Abi, this.wallet);
+      const decimals = await tokenContract.decimals();
+      
+      // Default to approving 1000 tokens (enough for 2 registrations)
+      const approvalAmount = amount ? 
+        ethers.parseUnits(amount, decimals) : 
+        ethers.parseUnits("1000", decimals);
+      
+      const tx = await tokenContract.approve(this.contract.target, approvalAmount);
+      await tx.wait();
+      
+      return tx.hash;
+    } catch (error) {
+      throw new Error(`Failed to approve tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async getTokenAllowance(): Promise<string> {
+    try {
+      const reputationTokenAddress = await this.contract.reputationToken();
+      const erc20Abi = [
+        "function allowance(address owner, address spender) view returns (uint256)",
+        "function decimals() view returns (uint8)"
+      ];
+      
+      const tokenContract = new ethers.Contract(reputationTokenAddress, erc20Abi, this.provider);
+      const decimals = await tokenContract.decimals();
+      const allowance = await tokenContract.allowance(this.wallet.address, this.contract.target);
+      
+      return ethers.formatUnits(allowance, decimals);
+    } catch (error) {
+      throw new Error(`Failed to get allowance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
 }
+

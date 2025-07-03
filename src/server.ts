@@ -6,6 +6,8 @@ import { ethers } from 'ethers';
 import zonesRoutes from './routes/zones.routes';
 import dronesRoutes from './routes/droneIdentityNFT.routes';
 import operatorsRoutes from './routes/operator.routes';
+import routeLoggingRoutes from './routes/routeLogging.routes';
+
 
 // Load environment variables
 dotenv.config();
@@ -29,6 +31,7 @@ app.get('/', (req, res) => {
       zones: '/api/zones',
       drones: '/api/drones',
       operators: '/api/operators',
+      routeLogs: '/api/route-logs',
       blockchain: '/api/blockchain/status'
     }
   });
@@ -74,6 +77,7 @@ app.get('/api/blockchain/status', async (req, res) => {
 app.use('/api/zones', zonesRoutes);
 app.use('/api/drones', dronesRoutes);
 app.use('/api/operators', operatorsRoutes);
+app.use('/api/route-logs', routeLoggingRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -100,6 +104,7 @@ app.listen(PORT, () => {
   console.log(`Zones API: http://localhost:${PORT}/api/zones`);
   console.log(`Drones API: http://localhost:${PORT}/api/drones`);
   console.log(`Operators API: http://localhost:${PORT}/api/operators`);
+  console.log(`Route Logs API: http://localhost:${PORT}/api/route-logs`);
 });
 
 export default app;
