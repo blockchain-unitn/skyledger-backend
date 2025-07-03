@@ -11,7 +11,7 @@ function getOperatorsService(): OperatorsService {
   }
 }
 
-// Base route - Get all operators info (add this route)
+// Base route - Get all operators info
 router.get('/', async (req, res) => {
   try {
     res.json({
@@ -27,7 +27,9 @@ router.get('/', async (req, res) => {
         getStats: 'GET /stats/overview',
         getBalance: 'GET /stats/balance',
         checkRoles: 'GET /debug/roles',
-        validateContract: 'GET /debug/contract'
+        validateContract: 'GET /debug/contract',
+        approveTokens: 'POST /approve-tokens',
+        getAllowance: 'GET /allowance'
       }
     });
   } catch (error) {
@@ -39,18 +41,40 @@ router.get('/', async (req, res) => {
   }
 });
 
-// Get operator info by address
-router.get('/:address', async (req, res) => {
+// SPECIFIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
+
+// Get token allowance
+router.get('/allowance', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const operatorInfo = await operatorsService.getOperatorInfo(req.params.address);
+    const allowance = await operatorsService.getTokenAllowance();
     
     res.json({
       success: true,
-      data: operatorInfo
+      data: { allowance }
     });
   } catch (error) {
-    console.error('Error getting operator info:', error);
+    console.error('Error getting allowance:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Approve reputation tokens
+router.post('/approve-tokens', async (req, res) => {
+  try {
+    const operatorsService = getOperatorsService();
+    const txHash = await operatorsService.approveReputationTokens(req.body.amount);
+    
+    res.json({
+      success: true,
+      data: { txHash },
+      message: 'Tokens approved successfully'
+    });
+  } catch (error) {
+    console.error('Error approving tokens:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -227,6 +251,25 @@ router.get('/debug/contract', async (req, res) => {
     });
   } catch (error) {
     console.error('Error validating contract:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get operator info by address
+router.get('/:address', async (req, res) => {
+  try {
+    const operatorsService = getOperatorsService();
+    const operatorInfo = await operatorsService.getOperatorInfo(req.params.address);
+    
+    res.json({
+      success: true,
+      data: operatorInfo
+    });
+  } catch (error) {
+    console.error('Error getting operator info:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'

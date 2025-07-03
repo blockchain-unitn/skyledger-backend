@@ -69,3 +69,25 @@ Get Contract Balance: GET /api/operators/stats/balance
 Check Roles: GET /api/operators/debug/roles
 Validate Contract: GET /api/operators/debug/contract
 ```
+
+### RouteLogging contract
+
+#### - Test the RouteLogging API
+```bash
+npm run test:route-logging
+```
+
+#### - RouteLogging API
+```http
+Get API Status: GET /api/route-logs
+Log Route: POST /api/route-logs
+Get Log by ID: GET /api/route-logs/{logId}
+Get All Logs: GET /api/route-logs/all
+Get Recent Logs: GET /api/route-logs/recent
+Get Logs Count: GET /api/route-logs/stats/count
+Get Drone Logs: GET /api/route-logs/drone/{droneId}
+Get Drone Logs (Paginated): GET /api/route-logs/drone/{droneId}/paginated
+Get UTM Authorized Drones: GET /api/route-logs/utm/{address}/drones
+Get UTM Authorized Drones (Safe): GET /api/route-logs/utm/{address}/drones/safe
+Get Log Zones: GET /api/route-logs/{logId}/zones
+```

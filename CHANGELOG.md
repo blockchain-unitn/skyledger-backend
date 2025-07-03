@@ -13,3 +13,4 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Environment configuration template
 - Complete REST API and test for blockchain zones management
 - Complete REST API and test for blockchain droneIdentityNFT management
+- Complete REST API and test for blockchain routeLogging management
