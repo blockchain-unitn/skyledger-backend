@@ -444,3 +444,121 @@ curl -X GET http://localhost:3000/api/violations/drone/DRONE001
 ```bash
 curl -X GET http://localhost:3000/api/violations/all
 ```
+
+### ReputationToken contract
+
+#### - Test the ReputationToken API
+```bash
+npm run test:reputation-tokens
+```
+
+#### - ReputationToken API
+```http
+Mint Tokens: POST /api/reputation-tokens/mint
+Burn Tokens: POST /api/reputation-tokens/burn
+Transfer Tokens: POST /api/reputation-tokens/transfer
+Transfer From: POST /api/reputation-tokens/transfer-from
+Approve Tokens: POST /api/reputation-tokens/approve
+Get Balance: GET /api/reputation-tokens/balance/{address}
+Get Allowance: GET /api/reputation-tokens/allowance/{owner}/{spender}
+Get Total Supply: GET /api/reputation-tokens/total-supply
+Get Token Name: GET /api/reputation-tokens/name
+Get Token Symbol: GET /api/reputation-tokens/symbol
+Get Token Decimals: GET /api/reputation-tokens/decimals
+Get Token Info: GET /api/reputation-tokens/info
+```
+
+#### - Example Usage
+
+**Mint tokens (owner only):**
+```bash
+curl -X POST http://localhost:3000/api/reputation-tokens/mint \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "0x1234567890123456789012345678901234567890",
+    "amount": "100.0"
+  }'
+```
+
+**Burn tokens (owner only):**
+```bash
+curl -X POST http://localhost:3000/api/reputation-tokens/burn \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "0x1234567890123456789012345678901234567890",
+    "amount": "50.0"
+  }'
+```
+
+**Transfer tokens:**
+```bash
+curl -X POST http://localhost:3000/api/reputation-tokens/transfer \
+  -H "Content-Type: application/json" \
+  -d '{
+    "to": "0x1234567890123456789012345678901234567890",
+    "amount": "25.0"
+  }'
+```
+
+**Transfer tokens from (requires allowance):**
+```bash
+curl -X POST http://localhost:3000/api/reputation-tokens/transfer-from \
+  -H "Content-Type: application/json" \
+  -d '{
+    "from": "0x1234567890123456789012345678901234567890",
+    "to": "0x0987654321098765432109876543210987654321",
+    "amount": "10.0"
+  }'
+```
+
+**Approve spender:**
+```bash
+curl -X POST http://localhost:3000/api/reputation-tokens/approve \
+  -H "Content-Type: application/json" \
+  -d '{
+    "spender": "0x1234567890123456789012345678901234567890",
+    "amount": "75.0"
+  }'
+```
+
+**Get balance:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/balance/0x1234567890123456789012345678901234567890
+```
+
+**Get allowance:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/allowance/0x1234567890123456789012345678901234567890/0x0987654321098765432109876543210987654321
+```
+
+**Get total supply:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/total-supply
+```
+
+**Get token name:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/name
+```
+
+**Get token symbol:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/symbol
+```
+
+**Get token decimals:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/decimals
+```
+
+**Get complete token info:**
+```bash
+curl -X GET http://localhost:3000/api/reputation-tokens/info
+```
+
+**Notes:**
+- All amounts are specified in Ether units (e.g., "1.0" = 1 token)
+- The contract automatically handles decimal precision (typically 18 decimals)
+- `mint` and `burn` functions are restricted to the contract owner
+- `transferFrom` requires prior approval via the `approve` function
+- All addresses must be valid Ethereum addresses
