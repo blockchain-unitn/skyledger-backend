@@ -92,6 +92,52 @@ export class ZonesService {
     return { zoneId, txHash: tx.hash };
   }
 
+  async updateZone(
+    zoneId: number, 
+    zoneData: UpdateZoneRequest
+  ): Promise<string> {
+    try {
+      const boundaries = zoneData.boundaries.map(coord => [
+        BigInt(Math.round(coord.latitude * 1000000)), // Convert to degrees * 10^6
+        BigInt(Math.round(coord.longitude * 1000000))
+      ]);
+
+      const tx = await this.contract.updateZone(
+        zoneId,
+        zoneData.name,
+        boundaries,
+        zoneData.maxAltitude,
+        zoneData.minAltitude,
+        zoneData.description
+      );
+
+      await tx.wait();
+      return tx.hash;
+    } catch (error) {
+      throw new Error(`Failed to update zone: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async setZoneStatus(zoneId: number, isActive: boolean): Promise<string> {
+    try {
+      const tx = await this.contract.setZoneStatus(zoneId, isActive);
+      await tx.wait();
+      return tx.hash;
+    } catch (error) {
+      throw new Error(`Failed to set zone status: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
+  async deleteZone(zoneId: number): Promise<string> {
+    try {
+      const tx = await this.contract.deleteZone(zoneId);
+      await tx.wait();
+      return tx.hash;
+    } catch (error) {
+      throw new Error(`Failed to delete zone: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
+  }
+
   async getTotalZones(): Promise<number> {
     const total = await this.contract.getTotalZones();
     return Number(total);
