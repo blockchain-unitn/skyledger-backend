@@ -11,70 +11,27 @@ function getOperatorsService(): OperatorsService {
   }
 }
 
-// Base route - Get all operators info
-router.get('/', async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      message: 'Operators API is working',
-      endpoints: {
-        getOperatorInfo: 'GET /:address',
-        registerOperator: 'POST /register',
-        spendTokens: 'POST /spend-tokens',
-        penalizeOperator: 'POST /penalize',
-        addAdmin: 'POST /admin/add',
-        removeAdmin: 'DELETE /admin/remove',
-        getStats: 'GET /stats/overview',
-        getBalance: 'GET /stats/balance',
-        checkRoles: 'GET /debug/roles',
-        validateContract: 'GET /debug/contract',
-        approveTokens: 'POST /approve-tokens',
-        getAllowance: 'GET /allowance'
-      }
-    });
-  } catch (error) {
-    console.error('Error in operators base route:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// SPECIFIC ROUTES MUST COME BEFORE PARAMETERIZED ROUTES
-
-// Get token allowance
-router.get('/allowance', async (req, res) => {
+// Add admin
+router.post('/add-admin', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const allowance = await operatorsService.getTokenAllowance();
-    
-    res.json({
-      success: true,
-      data: { allowance }
-    });
-  } catch (error) {
-    console.error('Error getting allowance:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
+    const { newAdmin } = req.body;
 
-// Approve reputation tokens
-router.post('/approve-tokens', async (req, res) => {
-  try {
-    const operatorsService = getOperatorsService();
-    const txHash = await operatorsService.approveReputationTokens(req.body.amount);
-    
+    if (!newAdmin) {
+      return res.status(400).json({
+        success: false,
+        error: 'newAdmin address is required'
+      });
+    }
+
+    const txHash = await operatorsService.addAdmin({ newAdmin });
     res.json({
       success: true,
       data: { txHash },
-      message: 'Tokens approved successfully'
+      message: 'Admin added successfully'
     });
   } catch (error) {
-    console.error('Error approving tokens:', error);
+    console.error('Error adding admin:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -82,13 +39,49 @@ router.post('/approve-tokens', async (req, res) => {
   }
 });
 
-// Register new operator
+// Remove admin
+router.post('/remove-admin', async (req, res) => {
+  try {
+    const operatorsService = getOperatorsService();
+    const { adminToRemove } = req.body;
+
+    if (!adminToRemove) {
+      return res.status(400).json({
+        success: false,
+        error: 'adminToRemove address is required'
+      });
+    }
+
+    const txHash = await operatorsService.removeAdmin({ adminToRemove });
+    res.json({
+      success: true,
+      data: { txHash },
+      message: 'Admin removed successfully'
+    });
+  } catch (error) {
+    console.error('Error removing admin:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Register operator
 router.post('/register', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const txHash = await operatorsService.registerOperator(req.body);
-    
-    res.status(201).json({
+    const { operator } = req.body;
+
+    if (!operator) {
+      return res.status(400).json({
+        success: false,
+        error: 'operator address is required'
+      });
+    }
+
+    const txHash = await operatorsService.registerOperator({ operator });
+    res.json({
       success: true,
       data: { txHash },
       message: 'Operator registered successfully'
@@ -102,12 +95,20 @@ router.post('/register', async (req, res) => {
   }
 });
 
-// Spend tokens (send native tokens to owner)
+// Spend tokens
 router.post('/spend-tokens', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const txHash = await operatorsService.spendTokens(req.body);
-    
+    const { amount } = req.body;
+
+    if (!amount || amount <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid amount is required'
+      });
+    }
+
+    const txHash = await operatorsService.spendTokens({ amount: amount.toString() });
     res.json({
       success: true,
       data: { txHash },
@@ -126,8 +127,16 @@ router.post('/spend-tokens', async (req, res) => {
 router.post('/penalize', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const txHash = await operatorsService.penalizeOperator(req.body);
-    
+    const { operator, penalty } = req.body;
+
+    if (!operator || !penalty || penalty <= 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'operator address and valid penalty amount are required'
+      });
+    }
+
+    const txHash = await operatorsService.penalizeOperator({ operator, penalty: penalty.toString() });
     res.json({
       success: true,
       data: { txHash },
@@ -142,19 +151,27 @@ router.post('/penalize', async (req, res) => {
   }
 });
 
-// Add admin
-router.post('/admin/add', async (req, res) => {
+// Get reputation
+router.get('/reputation/:operator', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const txHash = await operatorsService.addAdmin(req.body);
-    
+    const operator = req.params.operator;
+
+    if (!operator) {
+      return res.status(400).json({
+        success: false,
+        error: 'operator address is required'
+      });
+    }
+
+    const reputation = await operatorsService.getReputation(operator);
     res.json({
       success: true,
-      data: { txHash },
-      message: 'Admin added successfully'
+      data: { reputation },
+      message: 'Reputation retrieved successfully'
     });
   } catch (error) {
-    console.error('Error adding admin:', error);
+    console.error('Error getting reputation:', error);
     res.status(500).json({
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error'
@@ -162,111 +179,24 @@ router.post('/admin/add', async (req, res) => {
   }
 });
 
-// Remove admin
-router.delete('/admin/remove', async (req, res) => {
+// Get operator info
+router.get('/info/:address', async (req, res) => {
   try {
     const operatorsService = getOperatorsService();
-    const txHash = await operatorsService.removeAdmin(req.body);
-    
-    res.json({
-      success: true,
-      data: { txHash },
-      message: 'Admin removed successfully'
-    });
-  } catch (error) {
-    console.error('Error removing admin:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
+    const address = req.params.address;
 
-// Get operator statistics
-router.get('/stats/overview', async (req, res) => {
-  try {
-    const operatorsService = getOperatorsService();
-    const stats = await operatorsService.getOperatorStats();
-    
-    res.json({
-      success: true,
-      data: stats
-    });
-  } catch (error) {
-    console.error('Error getting operator stats:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
+    if (!address) {
+      return res.status(400).json({
+        success: false,
+        error: 'address is required'
+      });
+    }
 
-// Get contract balance
-router.get('/stats/balance', async (req, res) => {
-  try {
-    const operatorsService = getOperatorsService();
-    const balance = await operatorsService.getContractBalance();
-    
+    const operatorInfo = await operatorsService.getOperatorInfo(address);
     res.json({
       success: true,
-      data: { balance }
-    });
-  } catch (error) {
-    console.error('Error getting contract balance:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Check roles (debug)
-router.get('/debug/roles', async (req, res) => {
-  try {
-    const operatorsService = getOperatorsService();
-    const roles = await operatorsService.checkRoles();
-    
-    res.json({
-      success: true,
-      data: roles
-    });
-  } catch (error) {
-    console.error('Error checking roles:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Validate contract (debug)
-router.get('/debug/contract', async (req, res) => {
-  try {
-    const operatorsService = getOperatorsService();
-    const validation = await operatorsService.validateContract();
-    
-    res.json({
-      success: true,
-      data: validation
-    });
-  } catch (error) {
-    console.error('Error validating contract:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get operator info by address
-router.get('/:address', async (req, res) => {
-  try {
-    const operatorsService = getOperatorsService();
-    const operatorInfo = await operatorsService.getOperatorInfo(req.params.address);
-    
-    res.json({
-      success: true,
-      data: operatorInfo
+      data: operatorInfo,
+      message: 'Operator info retrieved successfully'
     });
   } catch (error) {
     console.error('Error getting operator info:', error);

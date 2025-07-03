@@ -12,53 +12,42 @@ function getRouteLoggingService(): RouteLoggingService {
   }
 }
 
-// Base route - API status
-router.get('/', async (req, res) => {
-  try {
-    res.json({
-      success: true,
-      message: 'Route Logging API is working',
-      endpoints: {
-        logRoute: 'POST /',
-        getLog: 'GET /:logId',
-        getAllLogs: 'GET /all',
-        getRecentLogs: 'GET /recent',
-        getLogsCount: 'GET /stats/count',
-        getDroneLogs: 'GET /drone/:droneId',
-        getDroneLogsPaginated: 'GET /drone/:droneId/paginated',
-        getUTMDrones: 'GET /utm/:address/drones',
-        getUTMDronesSafe: 'GET /utm/:address/drones/safe',
-        getLogZones: 'GET /:logId/zones'
-      },
-      enums: {
-        RouteStatus: {
-          NORMAL: 0,
-          DEVIATED: 1
-        },
-        ZoneType: {
-          RURAL: 0,
-          URBAN: 1,
-          HOSPITALS: 2,
-          MILITARY: 3,
-          RESTRICTED: 4
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error in route logging base route:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Log a new route
-router.post('/', async (req, res) => {
+// Log route
+router.post('/log', async (req, res) => {
   try {
     const routeLoggingService = getRouteLoggingService();
-    const result = await routeLoggingService.logRoute(req.body);
-    
+    const {
+      droneId,
+      utmAuthorizer,
+      zones,
+      startPoint,
+      endPoint,
+      route,
+      startTime,
+      endTime,
+      status
+    } = req.body;
+
+    // Validate required fields
+    if (!droneId || !utmAuthorizer || !zones || !startPoint || !endPoint || !route || !startTime || !endTime || status === undefined) {
+      return res.status(400).json({
+        success: false,
+        error: 'All route logging fields are required'
+      });
+    }
+
+    const result = await routeLoggingService.logRoute({
+      droneId,
+      utmAuthorizer,
+      zones,
+      startPoint,
+      endPoint,
+      route,
+      startTime,
+      endTime,
+      status
+    });
+
     res.status(201).json({
       success: true,
       data: result,
@@ -73,240 +62,24 @@ router.post('/', async (req, res) => {
   }
 });
 
-// SPECIFIC ROUTES BEFORE PARAMETERIZED ROUTES
-
-// Get all logs (with pagination)
-router.get('/all', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const offset = parseInt(req.query.offset as string) || 0;
-    const limit = parseInt(req.query.limit as string) || 10;
-    
-    const totalCount = await routeLoggingService.getLogsCount();
-    
-    if (totalCount === 0) {
-      return res.json({
-        success: true,
-        data: {
-          logs: [],
-          pagination: {
-            offset,
-            limit,
-            total: 0,
-            hasMore: false
-          }
-        },
-        message: 'No logs found'
-      });
-    }
-    
-    const recentLogs = await routeLoggingService.getRecentLogs(offset, limit);
-    
-    // Get the actual log data
-    const logs = await routeLoggingService.getLogs(recentLogs.logIds);
-    
-    res.json({
-      success: true,
-      data: {
-        logs,
-        pagination: {
-          offset,
-          limit,
-          total: totalCount,
-          hasMore: recentLogs.hasMore
-        }
-      }
-    });
-  } catch (error) {
-    console.error('Error getting all logs:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get recent logs
-router.get('/recent', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const limit = parseInt(req.query.limit as string) || 5;
-    
-    const totalCount = await routeLoggingService.getLogsCount();
-    
-    if (totalCount === 0) {
-      return res.json({
-        success: true,
-        data: [],
-        count: 0,
-        message: 'No logs found'
-      });
-    }
-    
-    const recentLogs = await routeLoggingService.getRecentLogs(0, limit);
-    const logs = await routeLoggingService.getLogs(recentLogs.logIds);
-    
-    res.json({
-      success: true,
-      data: logs,
-      count: logs.length
-    });
-  } catch (error) {
-    console.error('Error getting recent logs:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get total logs count
-router.get('/stats/count', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const count = await routeLoggingService.getLogsCount();
-    
-    res.json({
-      success: true,
-      data: { count }
-    });
-  } catch (error) {
-    console.error('Error getting logs count:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get all logs for a specific drone
-router.get('/drone/:droneId', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const droneId = parseInt(req.params.droneId);
-    
-    if (isNaN(droneId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid drone ID'
-      });
-    }
-    
-    const logIds = await routeLoggingService.getLogsOfDrone(droneId);
-    
-    res.json({
-      success: true,
-      data: {
-        droneId,
-        logIds,
-        count: logIds.length
-      }
-    });
-  } catch (error) {
-    console.error('Error getting drone logs:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get paginated logs for a specific drone
-router.get('/drone/:droneId/paginated', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const droneId = parseInt(req.params.droneId);
-    const offset = parseInt(req.query.offset as string) || 0;
-    const limit = parseInt(req.query.limit as string) || 10;
-    
-    if (isNaN(droneId)) {
-      return res.status(400).json({
-        success: false,
-        error: 'Invalid drone ID'
-      });
-    }
-    
-    const result = await routeLoggingService.getLogsOfDronePaginated(droneId, offset, limit);
-    
-    res.json({
-      success: true,
-      data: {
-        droneId,
-        ...result
-      }
-    });
-  } catch (error) {
-    console.error('Error getting paginated drone logs:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get drones authorized by a UTM
-router.get('/utm/:address/drones', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const utmAddress = req.params.address;
-    
-    const result = await routeLoggingService.getDronesAuthorizedByUTM(utmAddress);
-    
-    res.json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    console.error('Error getting UTM authorized drones:', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// Get drones authorized by a UTM (safe version with limit)
-router.get('/utm/:address/drones/safe', async (req, res) => {
-  try {
-    const routeLoggingService = getRouteLoggingService();
-    const utmAddress = req.params.address;
-    const maxResults = parseInt(req.query.maxResults as string) || 20;
-    
-    const result = await routeLoggingService.getDronesAuthorizedByUTMSafe(utmAddress, maxResults);
-    
-    res.json({
-      success: true,
-      data: result
-    });
-  } catch (error) {
-    console.error('Error getting UTM authorized drones (safe):', error);
-    res.status(500).json({
-      success: false,
-      error: error instanceof Error ? error.message : 'Unknown error'
-    });
-  }
-});
-
-// PARAMETERIZED ROUTES COME LAST
-
-// Get specific log by ID
-router.get('/:logId', async (req, res) => {
+// Get log by ID
+router.get('/log/:logId', async (req, res) => {
   try {
     const routeLoggingService = getRouteLoggingService();
     const logId = parseInt(req.params.logId);
-    
-    if (isNaN(logId)) {
+
+    if (isNaN(logId) || logId < 0) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid log ID'
+        error: 'Valid log ID is required'
       });
     }
-    
+
     const log = await routeLoggingService.getLog(logId);
-    
     res.json({
       success: true,
-      data: log
+      data: log,
+      message: 'Log retrieved successfully'
     });
   } catch (error) {
     console.error('Error getting log:', error);
@@ -317,30 +90,182 @@ router.get('/:logId', async (req, res) => {
   }
 });
 
-// Get zones of a specific log
-router.get('/:logId/zones', async (req, res) => {
+// Get logs count
+router.get('/count', async (req, res) => {
+  try {
+    const routeLoggingService = getRouteLoggingService();
+    const count = await routeLoggingService.getLogsCount();
+
+    res.json({
+      success: true,
+      data: { count },
+      message: 'Logs count retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting logs count:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get logs of drone
+router.get('/drone/:droneId', async (req, res) => {
+  try {
+    const routeLoggingService = getRouteLoggingService();
+    const droneId = parseInt(req.params.droneId);
+
+    if (isNaN(droneId) || droneId < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid drone ID is required'
+      });
+    }
+
+    const logs = await routeLoggingService.getLogsOfDrone(droneId);
+    res.json({
+      success: true,
+      data: { logIds: logs },
+      message: 'Drone logs retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting drone logs:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get logs of drone paginated
+router.get('/drone/:droneId/paginated', async (req, res) => {
+  try {
+    const routeLoggingService = getRouteLoggingService();
+    const droneId = parseInt(req.params.droneId);
+    const offset = parseInt(req.query.offset as string) || 0;
+    const limit = parseInt(req.query.limit as string) || 10;
+
+    if (isNaN(droneId) || droneId < 0) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid drone ID is required'
+      });
+    }
+
+    if (offset < 0 || limit <= 0 || limit > 100) {
+      return res.status(400).json({
+        success: false,
+        error: 'Valid offset (≥0) and limit (1-100) are required'
+      });
+    }
+
+    const result = await routeLoggingService.getLogsOfDronePaginated(
+      droneId,
+      offset,
+      limit
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'Paginated drone logs retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting paginated drone logs:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get drones authorized by UTM
+router.get('/utm/:address/drones', async (req, res) => {
+  try {
+    const routeLoggingService = getRouteLoggingService();
+    const utmAddress = req.params.address;
+
+    if (!utmAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'UTM address is required'
+      });
+    }
+
+    const result = await routeLoggingService.getDronesAuthorizedByUTM(utmAddress);
+    res.json({
+      success: true,
+      data: result,
+      message: 'UTM authorized drones retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting UTM authorized drones:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get drones authorized by UTM (safe version)
+router.get('/utm/:address/drones/safe', async (req, res) => {
+  try {
+    const routeLoggingService = getRouteLoggingService();
+    const utmAddress = req.params.address;
+    const maxResults = parseInt(req.query.maxResults as string) || 20;
+
+    if (!utmAddress) {
+      return res.status(400).json({
+        success: false,
+        error: 'UTM address is required'
+      });
+    }
+
+    if (maxResults <= 0 || maxResults > 50) {
+      return res.status(400).json({
+        success: false,
+        error: 'maxResults must be between 1 and 50'
+      });
+    }
+
+    const result = await routeLoggingService.getDronesAuthorizedByUTMSafe(
+      utmAddress,
+      maxResults
+    );
+
+    res.json({
+      success: true,
+      data: result,
+      message: 'UTM authorized drones (safe) retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting UTM authorized drones (safe):', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
+// Get zones of log
+router.get('/zones/:logId', async (req, res) => {
   try {
     const routeLoggingService = getRouteLoggingService();
     const logId = parseInt(req.params.logId);
-    
-    if (isNaN(logId)) {
+
+    if (isNaN(logId) || logId < 0) {
       return res.status(400).json({
         success: false,
-        error: 'Invalid log ID'
+        error: 'Valid log ID is required'
       });
     }
-    
+
     const zones = await routeLoggingService.getZonesOfLog(logId);
-    
     res.json({
       success: true,
-      data: {
-        logId,
-        zones: zones.map(zone => ({
-          id: zone,
-          name: ZoneType[zone]
-        }))
-      }
+      data: { zones },
+      message: 'Log zones retrieved successfully'
     });
   } catch (error) {
     console.error('Error getting log zones:', error);

@@ -37,7 +37,6 @@ export interface CreateZoneRequest {
 }
 
 export interface UpdateZoneRequest {
-  zoneId: number;
   name: string;
   boundaries: {
     latitude: number;

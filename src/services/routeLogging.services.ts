@@ -250,7 +250,7 @@ export class RouteLoggingService {
   async getZonesOfLog(logId: number): Promise<ZoneType[]> {
     try {
       const zones = await this.contract.getZonesOfLog(logId);
-      return zones;
+      return zones.map((zone: any) => Number(zone));
     } catch (error) {
       throw new Error(`Failed to get zones of log: ${error instanceof Error ? error.message : 'Unknown error'}`);
     }

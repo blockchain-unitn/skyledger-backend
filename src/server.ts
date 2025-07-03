@@ -9,6 +9,7 @@ import operatorsRoutes from './routes/operator.routes';
 import routeLoggingRoutes from './routes/routeLogging.routes';
 import routePermissionRoutes from './routes/routePermission.routes';
 import violationsAlertingRoutes from './routes/violationsAlerting.routes';
+import reputationTokenRoutes from './routes/reputationToken.routes';
 
 
 // Load environment variables
@@ -85,6 +86,7 @@ app.use('/api/operators', operatorsRoutes);
 app.use('/api/route-logs', routeLoggingRoutes);
 app.use('/api/route-permissions', routePermissionRoutes);
 app.use('/api/violations', violationsAlertingRoutes);
+app.use('/api/reputation-tokens', reputationTokenRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -114,6 +116,7 @@ app.listen(PORT, () => {
   console.log(`Route Logs API: http://localhost:${PORT}/api/route-logs`);
   console.log(`Route Permissions API: http://localhost:${PORT}/api/route-permissions`);
   console.log(`Violations API: http://localhost:${PORT}/api/violations`);
+  console.log(`Reputation Tokens API: http://localhost:${PORT}/api/reputation-tokens`);
 });
 
 export default app;
