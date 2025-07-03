@@ -131,6 +131,7 @@ npm run test:drones
 #### - DroneIdentityNFT API
 ```http
 Mint Drone: POST /api/drones/mint
+Get all Drones Data: GET /api/drones/all
 Get Drone Data: GET /api/drones/drone/{tokenId}
 Update Cert Hashes: PUT /api/drones/cert-hashes/{tokenId}
 Update Permitted Zones: PUT /api/drones/permitted-zones/{tokenId}
@@ -148,7 +149,6 @@ Get All Drones: GET /api/drones/all
 curl -X POST http://localhost:3000/api/drones/mint \
   -H "Content-Type: application/json" \
   -d '{
-    "to": "0x1234567890123456789012345678901234567890",
     "serialNumber": "DRONE001",
     "model": "DJI-PHANTOM",
     "droneType": 0,
@@ -158,6 +158,11 @@ curl -X POST http://localhost:3000/api/drones/mint \
     "maintenanceHash": "maintenanceHash1",
     "status": 0
   }'
+```
+
+**Get all drones data:**
+```bash
+curl -X GET http://localhost:3000/api/drones/all
 ```
 
 **Get drone data:**
@@ -561,4 +566,4 @@ curl -X GET http://localhost:3000/api/reputation-tokens/info
 - The contract automatically handles decimal precision (typically 18 decimals)
 - `mint` and `burn` functions are restricted to the contract owner
 - `transferFrom` requires prior approval via the `approve` function
-- All addresses must be valid Ethereum addresses
+- All addresses must be valid Ethereum addressesS

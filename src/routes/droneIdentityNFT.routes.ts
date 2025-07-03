@@ -12,6 +12,12 @@ function getDronesService(): DronesService {
   }
 }
 
+router.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'Drone Identity NFT API root. See /mint, /drone/:tokenId, /all, /cert-hashes/:tokenId, /permitted-zones/:tokenId, /owner-history/:tokenId, /maintenance-hash/:tokenId, /status/:tokenId, /burn/:tokenId'
+  });
+});
+
 // Mint new drone
 router.post('/mint', async (req, res) => {
   try {

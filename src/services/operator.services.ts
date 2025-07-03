@@ -52,6 +52,7 @@ export class OperatorsService {
       "function ADMIN_ROLE() external view returns (bytes32)",
       "function OWNER_ROLE() external view returns (bytes32)",
       "function DEFAULT_ADMIN_ROLE() external view returns (bytes32)",
+      "function getAllOperators() external view returns (address[])",
       "event OperatorRegistered(address indexed operator)",
       "event TokensSpent(address indexed operator, uint256 amount)",
       "event OperatorPenalized(address indexed operator, uint256 penalty)",
@@ -59,6 +60,15 @@ export class OperatorsService {
     ];
 
     this.contract = new ethers.Contract(contractAddress, abi, this.wallet);
+  }
+  async getAllOperators(): Promise<string[]> {
+    try {
+      const operators = await this.contract.getAllOperators();
+      return operators;
+    } catch (error) {
+      console.error('Error in getAllOperators:', error);
+      throw new Error(`Failed to get all operators: ${error instanceof Error ? error.message : 'Unknown error'}`);
+    }
   }
 
   private validateAndFormatAddress(address: string): string {
