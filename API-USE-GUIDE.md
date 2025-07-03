@@ -55,3 +55,17 @@ Burn/Delete Drone: DELETE /api/drones/{tokenId}
 Check Contract Ownership: GET /api/drones/debug/ownership
 Validate Contract: GET /api/drones/debug/contract
 ```
+
+#### - Operators API
+```http
+Get Operator Info: GET /api/operators/{address}
+Register Operator: POST /api/operators/register
+Spend Tokens: POST /api/operators/spend-tokens
+Penalize Operator: POST /api/operators/penalize
+Add Admin: POST /api/operators/admin/add
+Remove Admin: DELETE /api/operators/admin/remove
+Get Operator Stats: GET /api/operators/stats/overview
+Get Contract Balance: GET /api/operators/stats/balance
+Check Roles: GET /api/operators/debug/roles
+Validate Contract: GET /api/operators/debug/contract
+```

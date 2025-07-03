@@ -56,8 +56,8 @@ export class ZonesService {
       name: zone.name,
       zoneType: ZoneType[zone.zoneType],
       boundaries: zone.boundaries.map(coord => ({
-        latitude: Number(coord.latitude) / 1000000, // Convert back from degrees * 10^6
-        longitude: Number(coord.longitude) / 1000000
+        latitude: Number(coord[0]) / 1000000, // Access array elements directly
+        longitude: Number(coord[1]) / 1000000  // Access array elements directly
       })),
       maxAltitude: Number(zone.maxAltitude),
       minAltitude: Number(zone.minAltitude),

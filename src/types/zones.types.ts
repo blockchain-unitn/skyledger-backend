@@ -15,7 +15,7 @@ export interface Zone {
   id: bigint;
   name: string;
   zoneType: ZoneType;
-  boundaries: Coordinates[];
+  boundaries: [bigint, bigint][]; // Array of tuples [lat, lng]
   maxAltitude: bigint;
   minAltitude: bigint;
   isActive: boolean;
