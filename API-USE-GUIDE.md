@@ -18,7 +18,7 @@ Blockchain Status: GET /api/blockchain/status
 
 #### - Test the Zones API
 ```bash
-npx tsx test/zones-api.test.ts
+npm run test:zones
 ```
 
 #### - Zones API
@@ -36,7 +36,7 @@ Get Total Zones Count: GET /api/zones/stats/total
 
 #### - Test the DroneIdentityNFT API
 ```bash
-npx tsx test/droneIdentityNFT.test.ts
+npm run test:drones
 ```
 
 #### - DroneIdentityNFT API
@@ -90,4 +90,65 @@ Get Drone Logs (Paginated): GET /api/route-logs/drone/{droneId}/paginated
 Get UTM Authorized Drones: GET /api/route-logs/utm/{address}/drones
 Get UTM Authorized Drones (Safe): GET /api/route-logs/utm/{address}/drones/safe
 Get Log Zones: GET /api/route-logs/{logId}/zones
+```
+
+### RoutePermission contract
+
+#### - Test the RoutePermission API
+```bash
+npm run test:route-permissions
+```
+
+#### - RoutePermission API
+```http
+Check Route Authorization: POST /api/route-permissions/check
+Request Route Authorization: POST /api/route-permissions/request
+```
+
+### ViolationsAlerting contract
+
+#### - Test the ViolationsAlerting API
+```bash
+npm run test:violations
+```
+
+#### - ViolationsAlerting API
+```http
+Report Violation: POST /api/violations/report
+Get Violations Count: GET /api/violations/count
+Get Violation by Index: GET /api/violations/violation/{index}
+Get Violations by Drone: GET /api/violations/drone/{droneID}
+Get All Violations: GET /api/violations/all
+```
+
+#### - Example Usage
+
+**Report a violation:**
+```bash
+curl -X POST http://localhost:3000/api/violations/report \
+  -H "Content-Type: application/json" \
+  -d '{
+    "droneID": "DRONE001",
+    "position": "lat:45.4642,lng:9.1900"
+  }'
+```
+
+**Get violations count:**
+```bash
+curl -X GET http://localhost:3000/api/violations/count
+```
+
+**Get specific violation by index:**
+```bash
+curl -X GET http://localhost:3000/api/violations/violation/0
+```
+
+**Get all violations for a specific drone:**
+```bash
+curl -X GET http://localhost:3000/api/violations/drone/DRONE001
+```
+
+**Get all violations:**
+```bash
+curl -X GET http://localhost:3000/api/violations/all
 ```
