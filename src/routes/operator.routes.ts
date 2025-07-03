@@ -11,6 +11,30 @@ function getOperatorsService(): OperatorsService {
   }
 }
 
+router.get('/', (req, res) => {
+  res.status(200).json({
+    message: 'Operators API root. See /add-admin, /remove-admin, /register, /spend-tokens, /penalize, /reputation/:operator, /info/:address'
+  });
+});
+
+router.get('/all', async (req, res) => {
+  try {
+    const operatorsService = getOperatorsService();
+    const operators = await operatorsService.getAllOperators();
+    res.json({
+      success: true,
+      data: operators,
+      message: 'All operators retrieved successfully'
+    });
+  } catch (error) {
+    console.error('Error getting all operators:', error);
+    res.status(500).json({
+      success: false,
+      error: error instanceof Error ? error.message : 'Unknown error'
+    });
+  }
+});
+
 // Add admin
 router.post('/add-admin', async (req, res) => {
   try {
