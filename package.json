@@ -11,6 +11,8 @@
     "check-connection": "tsx scripts/check-connection.ts",
     "test": "mocha --require ts-node/register test/**/*.test.ts --timeout 60000",
     "test:route-logging": "mocha --require ts-node/register test/routeLogging-api.test.ts --timeout 60000",
+    "test:route-permissions": "mocha --require ts-node/register test/routePermission-api.test.ts --timeout 60000",
+    "test:violations": "mocha --require ts-node/register test/violationsAlerting-api.test.ts --timeout 60000",
     "test:zones": "mocha --require ts-node/register test/zones-api.test.ts --timeout 60000",
     "test:drones": "mocha --require ts-node/register test/droneIdentityNFT-api.test.ts --timeout 60000"
   },

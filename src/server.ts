@@ -7,6 +7,8 @@ import zonesRoutes from './routes/zones.routes';
 import dronesRoutes from './routes/droneIdentityNFT.routes';
 import operatorsRoutes from './routes/operator.routes';
 import routeLoggingRoutes from './routes/routeLogging.routes';
+import routePermissionRoutes from './routes/routePermission.routes';
+import violationsAlertingRoutes from './routes/violationsAlerting.routes';
 
 
 // Load environment variables
@@ -32,6 +34,8 @@ app.get('/', (req, res) => {
       drones: '/api/drones',
       operators: '/api/operators',
       routeLogs: '/api/route-logs',
+      routePermissions: '/api/route-permissions',
+      violations: '/api/violations',
       blockchain: '/api/blockchain/status'
     }
   });
@@ -59,7 +63,8 @@ app.get('/api/blockchain/status', async (req, res) => {
         blockNumber,
         chainId: network.chainId.toString(),
         zonesContractAddress: process.env.ZONES_ADDRESS,
-        droneNftContractAddress: process.env.DRONE_NFT_ADDRESS
+        droneNftContractAddress: process.env.DRONE_NFT_ADDRESS,
+        routePermissionContractAddress: process.env.ROUTE_PERMISSION_ADDRESS
       }
     });
   } catch (error) {
@@ -78,6 +83,8 @@ app.use('/api/zones', zonesRoutes);
 app.use('/api/drones', dronesRoutes);
 app.use('/api/operators', operatorsRoutes);
 app.use('/api/route-logs', routeLoggingRoutes);
+app.use('/api/route-permissions', routePermissionRoutes);
+app.use('/api/violations', violationsAlertingRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -105,6 +112,8 @@ app.listen(PORT, () => {
   console.log(`Drones API: http://localhost:${PORT}/api/drones`);
   console.log(`Operators API: http://localhost:${PORT}/api/operators`);
   console.log(`Route Logs API: http://localhost:${PORT}/api/route-logs`);
+  console.log(`Route Permissions API: http://localhost:${PORT}/api/route-permissions`);
+  console.log(`Violations API: http://localhost:${PORT}/api/violations`);
 });
 
 export default app;
