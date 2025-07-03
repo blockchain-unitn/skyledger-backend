@@ -4,6 +4,7 @@ import helmet from 'helmet';
 import dotenv from 'dotenv';
 import { ethers } from 'ethers';
 import zonesRoutes from './routes/zones.routes';
+import dronesRoutes from './routes/droneIdentityNFT.routes';
 
 // Load environment variables
 dotenv.config();
@@ -22,7 +23,12 @@ app.get('/', (req, res) => {
   res.json({
     message: 'Welcome to SkyLedger Backend API',
     version: '1.0.0',
-    status: 'running'
+    status: 'running',
+    endpoints: {
+      zones: '/api/zones',
+      drones: '/api/drones',
+      blockchain: '/api/blockchain/status'
+    }
   });
 });
 
@@ -47,7 +53,8 @@ app.get('/api/blockchain/status', async (req, res) => {
         connected: true,
         blockNumber,
         chainId: network.chainId.toString(),
-        contractAddress: process.env.ZONES_ADDRESS
+        zonesContractAddress: process.env.ZONES_ADDRESS,
+        droneNftContractAddress: process.env.DRONE_NFT_ADDRESS
       }
     });
   } catch (error) {
@@ -61,8 +68,9 @@ app.get('/api/blockchain/status', async (req, res) => {
   }
 });
 
-// Zones API routes
+// API routes
 app.use('/api/zones', zonesRoutes);
+app.use('/api/drones', dronesRoutes);
 
 // Error handling middleware
 app.use((err: Error, req: express.Request, res: express.Response, next: express.NextFunction) => {
@@ -86,6 +94,8 @@ app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
   console.log(`Health check: http://localhost:${PORT}/health`);
+  console.log(`Zones API: http://localhost:${PORT}/api/zones`);
+  console.log(`Drones API: http://localhost:${PORT}/api/drones`);
 });
 
 export default app;

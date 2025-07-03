@@ -49,7 +49,3 @@ src/
 ├── types/           # TypeScript type definitions (future)
 └── utils/           # Utility functions (future)
 ```
-
-## License
-
-MIT
