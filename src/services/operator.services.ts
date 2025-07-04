@@ -76,6 +76,7 @@ export class OperatorsService {
     const tokenAbi = [
       "function approve(address spender, uint256 amount) external returns (bool)",
       "function decimals() view returns (uint8)",
+      "function allowance(address owner, address spender) view returns (uint256)",
     ];
     const tokenContract = new ethers.Contract(
       reputationTokenAddress,
@@ -87,13 +88,18 @@ export class OperatorsService {
     this.initApproval(tokenContract, approvalAmount);
   }
 
-  private async initApproval(tokenContract: ethers.Contract, approvalAmount: bigint) {
+  private async initApproval(tokenContract: any, approvalAmount: bigint) {
     try {
-      const approveTx = await tokenContract.approve(
-        this.contract.target,
-        approvalAmount
-      );
-      await approveTx.wait();
+      // Check current allowance before approving
+      const currentAllowance = await tokenContract
+        .connect(this.wallet)
+        .allowance(this.wallet.address, this.contract.target);
+      if (currentAllowance < approvalAmount) {
+        const approveTx = await tokenContract
+          .connect(this.wallet)
+          .approve(this.contract.target, approvalAmount);
+        await approveTx.wait();
+      }
     } catch (error) {
       console.error("Failed to approve tokens during initialization:", error);
     }
@@ -165,18 +171,25 @@ export class OperatorsService {
   async registerOperator(
     registerData: RegisterOperatorRequest
   ): Promise<string> {
-    const formattedAddress = this.validateAndFormatAddress(
-      registerData.operator
+    const operatorWallet = new ethers.Wallet(
+      registerData.operator,
+      this.provider
     );
+    if (!operatorWallet) {
+      throw new Error("Invalid operator wallet address");
+    }
+    const operatorAddress = operatorWallet.address;
+    const formattedAddress = this.validateAndFormatAddress(operatorAddress);
 
     // Operator approve that this contract can spend infinite reputation tokens
     const reputationTokenAddress = await this.contract.reputationToken();
     const tokenAbi = [
       "function approve(address spender, uint256 amount) external returns (bool)",
       "function decimals() view returns (uint8)",
+      "function allowance(address owner, address spender) view returns (uint256)",
     ];
 
-    const tokenContract = new ethers.Contract(
+    const tokenContract: any = new ethers.Contract(
       reputationTokenAddress,
       tokenAbi,
       this.wallet
@@ -184,11 +197,33 @@ export class OperatorsService {
 
     // Default to approving infinite tokens
     const approvalAmount = ethers.MaxInt256;
-    const approveTx = await tokenContract.approve(
-      this.contract.target,
-      approvalAmount
-    );
-    await approveTx.wait();
+
+    // Check current allowance before approving
+    const currentAllowance = await tokenContract
+      .connect(operatorWallet)
+      .allowance(operatorAddress, this.contract.target);
+    // Only send approve if allowance is less than required
+    if (currentAllowance < approvalAmount) {
+      // Avoid sending duplicate transactions by checking for pending transactions if needed
+      try {
+        const approveTx = await tokenContract
+          .connect(operatorWallet)
+          .approve(this.contract.target, approvalAmount);
+        await approveTx.wait();
+      } catch (error: any) {
+        // If error is "already known", ignore it, otherwise rethrow
+        if (
+          error &&
+          error.error &&
+          error.error.message &&
+          error.error.message.includes("already known")
+        ) {
+          console.warn("Approval transaction already known, skipping.");
+        } else {
+          throw error;
+        }
+      }
+    }
 
     const tx = await this.contract.registerOperator(formattedAddress);
     await tx.wait();
