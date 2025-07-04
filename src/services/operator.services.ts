@@ -1,5 +1,5 @@
-import { ethers } from 'ethers';
-import { 
+import { ethers } from "ethers";
+import {
   OperatorInfo,
   OperatorResponse,
   RegisterOperatorRequest,
@@ -7,8 +7,8 @@ import {
   PenalizeOperatorRequest,
   AddAdminRequest,
   RemoveAdminRequest,
-  OperatorStats
-} from '../types/operator.types';
+  OperatorStats,
+} from "../types/operator.types";
 
 export class OperatorsService {
   private provider: ethers.JsonRpcProvider;
@@ -21,16 +21,16 @@ export class OperatorsService {
     const contractAddress = process.env.OPERATOR_ADDRESS;
 
     if (!rpcUrl) {
-      throw new Error('RPC_URL environment variable is required');
+      throw new Error("RPC_URL environment variable is required");
     }
     if (!privateKey) {
-      throw new Error('PRIVATE_KEY_1 environment variable is required');
+      throw new Error("PRIVATE_KEY_1 environment variable is required");
     }
     if (!contractAddress) {
-      throw new Error('OPERATOR_ADDRESS environment variable is required');
+      throw new Error("OPERATOR_ADDRESS environment variable is required");
     }
 
-    console.log('Initializing OperatorsService with:');
+    console.log("Initializing OperatorsService with:");
     console.log(`RPC URL: ${rpcUrl}`);
     console.log(`Contract Address: ${contractAddress}`);
 
@@ -56,18 +56,65 @@ export class OperatorsService {
       "event OperatorRegistered(address indexed operator)",
       "event TokensSpent(address indexed operator, uint256 amount)",
       "event OperatorPenalized(address indexed operator, uint256 penalty)",
-      "event Sent(address indexed to, uint256 amount)"
+      "event Sent(address indexed to, uint256 amount)",
     ];
 
     this.contract = new ethers.Contract(contractAddress, abi, this.wallet);
+
+    // approve reputation tokens from the owner to be spent by the contract infinitely
+    // the owner must approve the Operator contract to spend their tokens infinitely
+    // response = await reputationToken
+    //   .connect(owner)
+    //   .approve(operatorContractAddr, ethers.MaxInt256);
+    // await response.wait();
+    const reputationTokenAddress = process.env.REPUTATION_TOKEN_ADDRESS;
+    if (!reputationTokenAddress) {
+      throw new Error(
+        "REPUTATION_TOKEN_ADDRESS environment variable is required"
+      );
+    }
+    const tokenAbi = [
+      "function approve(address spender, uint256 amount) external returns (bool)",
+      "function decimals() view returns (uint8)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+    ];
+    const tokenContract = new ethers.Contract(
+      reputationTokenAddress,
+      tokenAbi,
+      this.wallet
+    );
+    const approvalAmount = ethers.MaxInt256; // Approve infinite tokens
+    // Moved approval logic to async init method
+    this.initApproval(tokenContract, approvalAmount);
+  }
+
+  private async initApproval(tokenContract: any, approvalAmount: bigint) {
+    try {
+      // Check current allowance before approving
+      const currentAllowance = await tokenContract
+        .connect(this.wallet)
+        .allowance(this.wallet.address, this.contract.target);
+      if (currentAllowance < approvalAmount) {
+        const approveTx = await tokenContract
+          .connect(this.wallet)
+          .approve(this.contract.target, approvalAmount);
+        await approveTx.wait();
+      }
+    } catch (error) {
+      console.error("Failed to approve tokens during initialization:", error);
+    }
   }
   async getAllOperators(): Promise<string[]> {
     try {
       const operators = await this.contract.getAllOperators();
       return operators;
     } catch (error) {
-      console.error('Error in getAllOperators:', error);
-      throw new Error(`Failed to get all operators: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      console.error("Error in getAllOperators:", error);
+      throw new Error(
+        `Failed to get all operators: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -79,41 +126,105 @@ export class OperatorsService {
     }
   }
 
-  async checkRoles(): Promise<{ isOwner: boolean; isAdmin: boolean; address: string }> {
+  async checkRoles(): Promise<{
+    isOwner: boolean;
+    isAdmin: boolean;
+    address: string;
+  }> {
     try {
       const ownerRole = await this.contract.OWNER_ROLE();
       const adminRole = await this.contract.ADMIN_ROLE();
       const callerAddress = this.wallet.address;
-      
+
       const isOwner = await this.contract.hasRole(ownerRole, callerAddress);
       const isAdmin = await this.contract.hasRole(adminRole, callerAddress);
 
       return {
         isOwner,
         isAdmin,
-        address: callerAddress
+        address: callerAddress,
       };
     } catch (error) {
-      throw new Error(`Failed to check roles: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to check roles: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
-    async getOperatorInfo(operatorAddress: string): Promise<OperatorResponse> {
-        const formattedAddress = this.validateAndFormatAddress(operatorAddress);
-        
-        const operatorInfo = await this.contract.getOperatorInfo(formattedAddress);
-        const reputationBalance = await this.contract.getReputation(formattedAddress);
+  async getOperatorInfo(operatorAddress: string): Promise<OperatorResponse> {
+    const formattedAddress = this.validateAndFormatAddress(operatorAddress);
 
-        return {
-            address: formattedAddress,
-            registered: operatorInfo.registered,
-            reputationBalance: reputationBalance.toString() // Convert BigInt to string
-        };
+    const operatorInfo = await this.contract.getOperatorInfo(formattedAddress);
+    const reputationBalance = await this.contract.getReputation(
+      formattedAddress
+    );
+
+    return {
+      address: formattedAddress,
+      registered: operatorInfo.registered,
+      reputationBalance: reputationBalance.toString(), // Convert BigInt to string
+    };
+  }
+
+  async registerOperator(
+    registerData: RegisterOperatorRequest
+  ): Promise<string> {
+    const operatorWallet = new ethers.Wallet(
+      registerData.operator,
+      this.provider
+    );
+    if (!operatorWallet) {
+      throw new Error("Invalid operator wallet address");
+    }
+    const operatorAddress = operatorWallet.address;
+    const formattedAddress = this.validateAndFormatAddress(operatorAddress);
+
+    // Operator approve that this contract can spend infinite reputation tokens
+    const reputationTokenAddress = await this.contract.reputationToken();
+    const tokenAbi = [
+      "function approve(address spender, uint256 amount) external returns (bool)",
+      "function decimals() view returns (uint8)",
+      "function allowance(address owner, address spender) view returns (uint256)",
+    ];
+
+    const tokenContract: any = new ethers.Contract(
+      reputationTokenAddress,
+      tokenAbi,
+      this.wallet
+    );
+
+    // Default to approving infinite tokens
+    const approvalAmount = ethers.MaxInt256;
+
+    // Check current allowance before approving
+    const currentAllowance = await tokenContract
+      .connect(operatorWallet)
+      .allowance(operatorAddress, this.contract.target);
+    // Only send approve if allowance is less than required
+    if (currentAllowance < approvalAmount) {
+      // Avoid sending duplicate transactions by checking for pending transactions if needed
+      try {
+        const approveTx = await tokenContract
+          .connect(operatorWallet)
+          .approve(this.contract.target, approvalAmount);
+        await approveTx.wait();
+      } catch (error: any) {
+        // If error is "already known", ignore it, otherwise rethrow
+        if (
+          error &&
+          error.error &&
+          error.error.message &&
+          error.error.message.includes("already known")
+        ) {
+          console.warn("Approval transaction already known, skipping.");
+        } else {
+          throw error;
+        }
+      }
     }
 
-  async registerOperator(registerData: RegisterOperatorRequest): Promise<string> {
-    const formattedAddress = this.validateAndFormatAddress(registerData.operator);
-    
     const tx = await this.contract.registerOperator(formattedAddress);
     await tx.wait();
     return tx.hash;
@@ -121,83 +232,108 @@ export class OperatorsService {
 
   async spendTokens(spendData: SpendTokensRequest): Promise<string> {
     const amount = ethers.parseEther(spendData.amount);
-    
+
     const tx = await this.contract.spendTokens({ value: amount });
     await tx.wait();
     return tx.hash;
   }
 
-  async penalizeOperator(penalizeData: PenalizeOperatorRequest): Promise<string> {
-    const formattedAddress = this.validateAndFormatAddress(penalizeData.operator);
-    
+  async penalizeOperator(
+    penalizeData: PenalizeOperatorRequest
+  ): Promise<string> {
+    const formattedAddress = this.validateAndFormatAddress(
+      penalizeData.operator
+    );
+
     // Get reputation token decimals for proper formatting
     const reputationTokenAddress = await this.contract.reputationToken();
     const tokenAbi = ["function decimals() view returns (uint8)"];
-    const tokenContract = new ethers.Contract(reputationTokenAddress, tokenAbi, this.provider);
+    const tokenContract = new ethers.Contract(
+      reputationTokenAddress,
+      tokenAbi,
+      this.provider
+    );
     const decimals = await tokenContract.decimals();
-    
+
     const penaltyAmount = ethers.parseUnits(penalizeData.penalty, decimals);
-    
-    const tx = await this.contract.penalizeOperator(formattedAddress, penaltyAmount);
+
+    const tx = await this.contract.penalizeOperator(
+      formattedAddress,
+      penaltyAmount
+    );
     await tx.wait();
     return tx.hash;
   }
 
   async addAdmin(adminData: AddAdminRequest): Promise<string> {
     const formattedAddress = this.validateAndFormatAddress(adminData.newAdmin);
-    
+
     const tx = await this.contract.addAdmin(formattedAddress);
     await tx.wait();
     return tx.hash;
   }
 
   async removeAdmin(removeData: RemoveAdminRequest): Promise<string> {
-    const formattedAddress = this.validateAndFormatAddress(removeData.adminToRemove);
-    
+    const formattedAddress = this.validateAndFormatAddress(
+      removeData.adminToRemove
+    );
+
     const tx = await this.contract.removeAdmin(formattedAddress);
     await tx.wait();
     return tx.hash;
   }
 
-    async getOperatorStats(): Promise<OperatorStats> {
-        try {
-            // Get reputation token info
-            const reputationTokenAddress = await this.contract.reputationToken();
-            const ownerAddress = await this.contract.ownerAddr();
-            
-            const tokenAbi = [
-            "function symbol() view returns (string)",
-            "function decimals() view returns (uint8)"
-            ];
-            const tokenContract = new ethers.Contract(reputationTokenAddress, tokenAbi, this.provider);
-            
-            const symbol = await tokenContract.symbol();
-            const decimals = await tokenContract.decimals();
+  async getOperatorStats(): Promise<OperatorStats> {
+    try {
+      // Get reputation token info
+      const reputationTokenAddress = await this.contract.reputationToken();
+      const ownerAddress = await this.contract.ownerAddr();
 
-            // Note: We can't easily get all registered operators without events
-            // This would require querying past events or maintaining a separate list
-            return {
-            totalOperators: 0, // Would need event querying to get accurate count
-            registeredOperators: [], // Would need event querying
-            contractOwner: ownerAddress,
-            reputationTokenAddress,
-            reputationTokenSymbol: symbol,
-            reputationTokenDecimals: Number(decimals) // Convert BigInt to number
-            };
-        } catch (error) {
-            throw new Error(`Failed to get operator stats: ${error instanceof Error ? error.message : 'Unknown error'}`);
-        }
+      const tokenAbi = [
+        "function symbol() view returns (string)",
+        "function decimals() view returns (uint8)",
+      ];
+      const tokenContract = new ethers.Contract(
+        reputationTokenAddress,
+        tokenAbi,
+        this.provider
+      );
+
+      const symbol = await tokenContract.symbol();
+      const decimals = await tokenContract.decimals();
+
+      // Note: We can't easily get all registered operators without events
+      // This would require querying past events or maintaining a separate list
+      return {
+        totalOperators: 0, // Would need event querying to get accurate count
+        registeredOperators: [], // Would need event querying
+        contractOwner: ownerAddress,
+        reputationTokenAddress,
+        reputationTokenSymbol: symbol,
+        reputationTokenDecimals: Number(decimals), // Convert BigInt to number
+      };
+    } catch (error) {
+      throw new Error(
+        `Failed to get operator stats: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
+  }
 
-async getContractBalance(): Promise<string> {
-  const balance = await this.provider.getBalance(this.contract.target);
-  return ethers.formatEther(balance); // This already converts to string
-}
-  async validateContract(): Promise<{ exists: boolean; codeSize: number; hasRequiredFunctions: boolean }> {
+  async getContractBalance(): Promise<string> {
+    const balance = await this.provider.getBalance(this.contract.target);
+    return ethers.formatEther(balance); // This already converts to string
+  }
+  async validateContract(): Promise<{
+    exists: boolean;
+    codeSize: number;
+    hasRequiredFunctions: boolean;
+  }> {
     try {
       const code = await this.provider.getCode(this.contract.target);
-      const exists = code !== '0x';
-      
+      const exists = code !== "0x";
+
       let hasRequiredFunctions = false;
       try {
         await this.contract.ownerAddr();
@@ -205,42 +341,57 @@ async getContractBalance(): Promise<string> {
       } catch (error) {
         // Contract might not have required functions
       }
-      
+
       return {
         exists,
         codeSize: code.length - 2,
-        hasRequiredFunctions
+        hasRequiredFunctions,
       };
     } catch (error) {
-      throw new Error(`Contract validation failed: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Contract validation failed: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
   async approveReputationTokens(amount?: string): Promise<string> {
     try {
       // Get reputation token address
       const reputationTokenAddress = await this.contract.reputationToken();
-      
+
       // ERC20 ABI for approve function
       const erc20Abi = [
         "function approve(address spender, uint256 amount) external returns (bool)",
         "function decimals() view returns (uint8)",
-        "function allowance(address owner, address spender) view returns (uint256)"
+        "function allowance(address owner, address spender) view returns (uint256)",
       ];
-      
-      const tokenContract = new ethers.Contract(reputationTokenAddress, erc20Abi, this.wallet);
+
+      const tokenContract = new ethers.Contract(
+        reputationTokenAddress,
+        erc20Abi,
+        this.wallet
+      );
       const decimals = await tokenContract.decimals();
-      
+
       // Default to approving 1000 tokens (enough for 2 registrations)
-      const approvalAmount = amount ? 
-        ethers.parseUnits(amount, decimals) : 
-        ethers.parseUnits("1000", decimals);
-      
-      const tx = await tokenContract.approve(this.contract.target, approvalAmount);
+      const approvalAmount = amount
+        ? ethers.parseUnits(amount, decimals)
+        : ethers.parseUnits("1000", decimals);
+
+      const tx = await tokenContract.approve(
+        this.contract.target,
+        approvalAmount
+      );
       await tx.wait();
-      
+
       return tx.hash;
     } catch (error) {
-      throw new Error(`Failed to approve tokens: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to approve tokens: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
@@ -249,24 +400,36 @@ async getContractBalance(): Promise<string> {
       const reputationTokenAddress = await this.contract.reputationToken();
       const erc20Abi = [
         "function allowance(address owner, address spender) view returns (uint256)",
-        "function decimals() view returns (uint8)"
+        "function decimals() view returns (uint8)",
       ];
-      
-      const tokenContract = new ethers.Contract(reputationTokenAddress, erc20Abi, this.provider);
+
+      const tokenContract = new ethers.Contract(
+        reputationTokenAddress,
+        erc20Abi,
+        this.provider
+      );
       const decimals = await tokenContract.decimals();
-      const allowance = await tokenContract.allowance(this.wallet.address, this.contract.target);
-      
+      const allowance = await tokenContract.allowance(
+        this.wallet.address,
+        this.contract.target
+      );
+
       return ethers.formatUnits(allowance, decimals);
     } catch (error) {
-      throw new Error(`Failed to get allowance: ${error instanceof Error ? error.message : 'Unknown error'}`);
+      throw new Error(
+        `Failed to get allowance: ${
+          error instanceof Error ? error.message : "Unknown error"
+        }`
+      );
     }
   }
 
   async getReputation(operatorAddress: string): Promise<string> {
     const formattedAddress = this.validateAndFormatAddress(operatorAddress);
-    
-    const reputationBalance = await this.contract.getReputation(formattedAddress);
+
+    const reputationBalance = await this.contract.getReputation(
+      formattedAddress
+    );
     return reputationBalance.toString();
   }
 }
-
