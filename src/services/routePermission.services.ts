@@ -124,13 +124,7 @@ export class RoutePermissionService {
 
       console.log('Sending transaction with:', contractRequest);
 
-      // Get the current nonce to avoid nonce conflicts
-      const nonce = await this.wallet.getNonce();
-      console.log('Using nonce:', nonce);
-
-      const tx = await this.contract.requestRouteAuthorization(contractRequest, {
-        nonce: nonce
-      });
+      const tx = await this.contract.requestRouteAuthorization(contractRequest);
       console.log('Transaction sent:', tx.hash);
 
       const receipt = await tx.wait();

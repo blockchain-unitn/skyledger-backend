@@ -1,11 +1,11 @@
 export interface Violation {
-  droneID: string;
+  droneID: number;
   position: string;
   timestamp: number;
 }
 
 export interface ReportViolationRequest {
-  droneID: string;
+  droneID: number;
   position: string;
 }
 
@@ -15,7 +15,7 @@ export interface ViolationsByDroneResponse {
 }
 
 export interface AllViolationsResponse {
-  droneIDs: string[];
+  droneIDs: number[];
   positions: string[];
   timestamps: number[];
 }
