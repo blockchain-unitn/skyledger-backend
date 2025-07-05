@@ -25,7 +25,11 @@ Description: Node.js server built with TypeScript and Express.
 
 ### Installation
 
-1. Clone the repository
+1. Clone the repository:
+    ```bash
+    git clone https://github.com/blockchain-unitn/skyledger-backend.git
+    cd skyledger-backend
+    ```
 2. Install dependencies:
    ```bash
    npm install
